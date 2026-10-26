@@ -827,6 +827,7 @@ export class TranslateService implements ITranslateService {
         return this.fallbackLangs();
     }
 
+    /** Forward onLookup when overriding this method to preserve parser language context. */
     protected getTextToInterpolate(
         key: string,
         lang?: Language,
@@ -853,32 +854,11 @@ export class TranslateService implements ITranslateService {
             return undefined;
         }
 
-        // Only legacy or value-replacing overrides need a separate metadata lookup.
-        const lookup =
-            reportedLookup?.translation === translation
-                ? reportedLookup
-                : this.lookupTranslationWithContext(key, lang);
         return {
             translation,
-            // Reuse store context only when its value matches the hook's result.
-            context:
-                lookup?.translation === translation
-                    ? lookup.context
-                    : lang
-                      ? { key, lang }
-                      : { key },
+            // Equal values from another lookup do not prove which language supplied this one.
+            context: reportedLookup?.translation === translation ? reportedLookup.context : { key },
         };
-    }
-
-    private lookupTranslationWithContext(
-        key: string,
-        lang?: Language,
-    ): TranslationLookupResult | undefined {
-        // Metadata lookup must not invoke hooks again while walking the parent chain.
-        return (
-            this.lookupOwnTranslation(key, lang) ??
-            this.parent?.lookupTranslationWithContext(key, lang)
-        );
     }
 
     private lookupOwnTranslation(
